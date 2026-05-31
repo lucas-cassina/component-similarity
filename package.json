@@ -1,0 +1,44 @@
+{
+  "name": "component-similarity",
+  "version": "0.1.0",
+  "description": "Detect near-duplicate React components via semantic embeddings. Scans TSX source, embeds each component with OpenAI, clusters similar pairs, and posts a PR comment.",
+  "type": "module",
+  "bin": {
+    "csa": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "components.config.example.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/cli.js",
+    "clean": "rm -rf dist",
+    "prepack": "npm run clean && npm run build",
+    "csa": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "react",
+    "components",
+    "duplicate-detection",
+    "embeddings",
+    "openai",
+    "ci",
+    "github-actions"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.67.0",
+    "ts-morph": "^23.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

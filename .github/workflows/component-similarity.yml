@@ -1,0 +1,54 @@
+name: Component Similarity
+
+on:
+  pull_request:
+    # APP-SPECIFIC: adjust to match your components directory.
+    paths:
+      - 'src/components/**/*.tsx'
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: csa-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  component-similarity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Restore embedding cache. Exact key hit = 0 API calls.
+      # Prefix hit = partial restore; only changed files are re-embedded.
+      - name: Restore embedding cache
+        uses: actions/cache@v4
+        with:
+          path: out/components-embeddings.json
+          # APP-SPECIFIC: match your srcDir glob.
+          key: csa-embed-${{ hashFiles('src/components/**/*.tsx') }}
+          restore-keys: csa-embed-
+
+      - name: Analyze component similarity
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: npx csa analyze
+
+      - name: Comment on PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx csa comment
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: component-similarity
+          path: out/
