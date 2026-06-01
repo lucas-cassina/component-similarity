@@ -30,11 +30,10 @@ function clusterSection(cluster: SimilarityCluster, allPairs: SimilarityPair[]):
     rows.join('\n'),
     '',
     `> **Suggestion:** ${cluster.suggestion}`,
-    '',
     pairRows.length
-      ? `<details><summary>Top similar pairs</summary>\n\n| Pair | Score |\n|------|-------|\n${pairRows.join('\n')}\n\n</details>`
+      ? `\n<details><summary>Top similar pairs</summary>\n\n| Pair | Score |\n|------|-------|\n${pairRows.join('\n')}\n\n</details>`
       : '',
-  ].join('\n');
+  ].filter(s => s !== '').join('\n');
 }
 
 export function buildMarkdown(data: ComponentsSimilarity): string {

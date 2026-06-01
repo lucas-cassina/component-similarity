@@ -2,3 +2,6 @@ node_modules/
 dist/
 out/
 *.local.js
+.env
+.env.*
+!.env.example

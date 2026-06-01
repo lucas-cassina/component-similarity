@@ -21,15 +21,22 @@ async function hashFile(filePath: string): Promise<string> {
 }
 
 async function loadCache(cachePath: string, model: string): Promise<Map<string, ComponentEmbedding>> {
+  let raw: string;
   try {
-    const cached: ComponentsEmbeddings = JSON.parse(await readFile(cachePath, 'utf8'));
+    raw = await readFile(cachePath, 'utf8');
+  } catch {
+    return new Map(); // cold start — no cache file yet
+  }
+  try {
+    const cached: ComponentsEmbeddings = JSON.parse(raw);
     if (cached.model !== model) return new Map();
     const map = new Map<string, ComponentEmbedding>();
     for (const e of cached.components) {
       if (e.fileHash) map.set(e.relativePath, e);
     }
     return map;
-  } catch {
+  } catch (err) {
+    console.warn(`Cache corrupted, re-embedding all components. (${(err as Error).message})`);
     return new Map();
   }
 }
@@ -70,8 +77,8 @@ export async function embed(configPath?: string): Promise<ComponentsEmbeddings> 
       const idx = next++;
       if (idx >= components.length) return;
       const c = components[idx];
-      const fileHash = await hashFile(c.filePath);
       const cached = cache.get(c.relativePath);
+      const fileHash = await hashFile(c.filePath);
 
       if (cached?.fileHash === fileHash) {
         embedded[idx] = cached;

@@ -27,9 +27,17 @@ class UnionFind {
 
   find(x: string): string {
     if (!this.parent.has(x)) this.parent.set(x, x);
-    const p = this.parent.get(x)!;
-    if (p !== x) this.parent.set(x, this.find(p));
-    return this.parent.get(x)!;
+    // Find root iteratively to avoid stack overflow on deep chains
+    let root = x;
+    while (this.parent.get(root) !== root) root = this.parent.get(root)!;
+    // Path compression
+    let curr = x;
+    while (curr !== root) {
+      const next = this.parent.get(curr)!;
+      this.parent.set(curr, root);
+      curr = next;
+    }
+    return root;
   }
 
   union(x: string, y: string): void {
