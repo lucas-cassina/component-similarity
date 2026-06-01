@@ -1,39 +1,39 @@
 # component-similarity
 
-Detects near-duplicate React components in your codebase using semantic embeddings.
+Detecta componentes React casi idénticos en tu codebase usando embeddings semánticos.
 
-Scans your `.tsx`/`.jsx` source files, extracts each component's props and JSX structure, embeds them with OpenAI, and computes pairwise cosine similarity. Components that are too similar get flagged and grouped into clusters with a consolidation suggestion. Results are posted as a sticky comment on the pull request.
-
----
-
-## The problem it solves
-
-Every team eventually ends up with three versions of the same card, two loaders that do the same thing, and four ways to show an empty state. Nobody did it on purpose — they just didn't know the other one existed.
-
-This tool runs in CI and surfaces those overlaps before they accumulate.
+Escanea tus archivos `.tsx`/`.jsx`, extrae las props y la estructura JSX de cada componente, los embede con OpenAI y calcula similitud coseno entre todos los pares. Los componentes demasiado parecidos se agrupan en clusters con una sugerencia de consolidación. El resultado se publica como comentario sticky en el pull request.
 
 ---
 
-## Installation
+## El problema que resuelve
+
+Todo equipo termina con tres versiones del mismo card, dos loaders que hacen lo mismo y cuatro formas de mostrar un empty state. Nadie lo hizo con mala intención — simplemente nadie sabía que el otro existía.
+
+Esta herramienta corre en CI y muestra esas superposiciones antes de que se acumulen.
+
+---
+
+## Instalación
 
 ```bash
 npm install --save-dev component-similarity
 ```
 
-Add a `components.config.js` to the root of your project (see [Configuration](#configuration) below).
+Agregá un `components.config.js` en la raíz del proyecto (ver [Configuración](#configuración) más abajo).
 
 ---
 
-## Usage
+## Uso
 
 ```bash
-# Full pipeline: scan → embed → compare → report
+# Pipeline completo: scan → embed → compare → report
 npx csa analyze
 
-# Then post the report as a sticky PR comment
+# Publicar el reporte como comentario sticky en el PR
 npx csa comment
 
-# Or run each step individually
+# O ejecutar cada paso por separado
 npx csa scan      # → out/components-manifest.json
 npx csa embed     # → out/components-embeddings.json
 npx csa compare   # → out/components-similarity.json
@@ -42,9 +42,9 @@ npx csa report    # → out/report.md
 
 ---
 
-## Configuration
+## Configuración
 
-Copy `components.config.example.js` to `components.config.js` and adjust:
+Copiá `components.config.example.js` a `components.config.js` y ajustá:
 
 ```js
 export default {
@@ -56,60 +56,60 @@ export default {
 };
 ```
 
-### `srcDir` (required)
+### `srcDir` (requerido)
 
-Path to the directory that contains your components, relative to the project root. The scan is recursive — it walks all subdirectories.
+Ruta al directorio que contiene tus componentes, relativa a la raíz del proyecto. El escaneo es recursivo — recorre todos los subdirectorios.
 
 ```js
-srcDir: 'src/components'       // standard Create React App / Vite layout
-srcDir: 'components'           // Next.js layout
-srcDir: 'src/ui'               // custom
+srcDir: 'src/components'  // Create React App / Vite
+srcDir: 'components'      // Next.js
+srcDir: 'src/ui'          // estructura personalizada
 ```
 
-Both `.tsx` and `.jsx` files are picked up. Files that don't export a PascalCase name are skipped (utilities, hooks, re-export barrels, etc.).
+Se procesan tanto `.tsx` como `.jsx`. Los archivos que no exportan un nombre en PascalCase son ignorados (utilidades, hooks, barrels de re-exportación, etc.).
 
 ### `threshold`
 
-A number between 0 and 1. Two components are flagged as similar when their cosine similarity score is **at or above** this value.
+Un número entre 0 y 1. Dos componentes se marcan como similares cuando su similitud coseno es **igual o mayor** a este valor.
 
-- **0.90** — very conservative. Only catches near-identical components (same props, same DOM structure).
-- **0.85** — recommended default. Catches genuine duplicates and components that grew apart from the same origin.
-- **0.80** — broader net. Will surface components that share a general purpose (e.g. all form fields) even if their props differ significantly. Expect more noise.
-- **0.75** — mostly noise for a typical codebase.
+- **0.90** — muy conservador. Solo atrapa componentes casi idénticos (mismas props, misma estructura DOM).
+- **0.85** — valor por defecto recomendado. Atrapa duplicados reales y componentes que divergieron a partir del mismo origen.
+- **0.80** — red más amplia. Puede marcar componentes que comparten un propósito general (por ejemplo, todos los campos de formulario) aunque sus props difieran bastante. Esperar más falsos positivos.
+- **0.75** — principalmente ruido en una codebase típica.
 
-Start at 0.85. If the report is empty and you suspect there are duplicates, lower to 0.82 or 0.80.
+Empezá en 0.85. Si el reporte sale vacío y sospechás que hay duplicados, bajá a 0.82 o 0.80.
 
 ### `model`
 
-The OpenAI embeddings model to use. `text-embedding-3-small` is the right choice for this task: it's fast, cheap, and produces high-quality semantic vectors for code-like text.
+El modelo de embeddings de OpenAI a usar. `text-embedding-3-small` es la elección correcta para esta tarea: es rápido, barato y produce vectores semánticos de alta calidad para texto con estructura de código.
 
-`text-embedding-3-large` costs 13× more and doesn't meaningfully improve results for component similarity. Don't change this unless you have a specific reason.
+`text-embedding-3-large` cuesta 13× más y no mejora los resultados de forma significativa para similitud de componentes. No cambies esto a menos que tengas una razón específica.
 
 ### `concurrency`
 
-How many embedding requests to send to OpenAI in parallel. The default (8) saturates the free-tier rate limit without exceeding it. If you're on a paid tier with higher rate limits you can raise this; if you're hitting 429 errors lower it.
+Cuántas llamadas al API de embeddings se hacen en paralelo. El valor por defecto (8) satura el rate limit del tier gratuito sin superarlo. Si estás en un tier pago con límites más altos podés subirlo; si ves errores 429, bajalo.
 
 ### `outDir`
 
-Where the JSON intermediate files and the final `report.md` are written. Defaults to `out`. If your project already uses an `out` directory for something else, change this to avoid conflicts (e.g. `out-similarity`).
+Dónde se escriben los archivos JSON intermedios y el `report.md` final. Por defecto es `out`. Si tu proyecto ya usa un directorio `out` para otra cosa, cambialo para evitar conflictos (por ejemplo, `out-similarity`).
 
 ---
 
-## How it works
+## Cómo funciona
 
-### 1. Scan (no API calls)
+### 1. Scan (sin llamadas al API)
 
-`csa scan` walks `srcDir` and parses each file with [ts-morph](https://ts-morph.com/). For each component it extracts:
+`csa scan` recorre el `srcDir` y parsea cada archivo con [ts-morph](https://ts-morph.com/). De cada componente extrae:
 
-- **Props** — TypeScript interfaces/type aliases, or destructured function parameters for JS files
-- **JSX structure** — the HTML element tags (`div`, `button`, `img`, …) in depth-first order, up to 60 tags
-- **Imports** — named and default imports from all `import` statements
+- **Props** — interfaces o type aliases de TypeScript, o parámetros desestructurados de la función para archivos JS
+- **Estructura JSX** — los tags HTML (`div`, `button`, `img`, …) en orden depth-first, hasta 60 tags
+- **Imports** — imports nombrados y por defecto de todos los `import` del archivo
 
-These three signals together give a compact semantic fingerprint of what the component does and how it's built.
+Estas tres señales juntas forman una huella semántica compacta de qué hace el componente y cómo está construido.
 
-### 2. Embed (OpenAI API)
+### 2. Embed (llama al API de OpenAI)
 
-`csa embed` serializes each component into a short text string and calls the OpenAI embeddings API:
+`csa embed` serializa cada componente en un texto corto y llama al API de embeddings de OpenAI:
 
 ```
 Component: MantineDateField
@@ -118,42 +118,42 @@ JSX structure: (none)
 Imports: React, DatePicker, useField, useFormikContext
 ```
 
-The resulting vector (1536 dimensions) encodes the semantic meaning of the component. Components that do similar things end up close together in this space regardless of naming.
+El vector resultante (1536 dimensiones) codifica el significado semántico del componente. Componentes que hacen cosas parecidas quedan cerca en ese espacio, independientemente de cómo se llamen.
 
-**Embedding cache:** the hash of each source file is stored alongside its vector. On subsequent runs, only files that changed since the last run are re-embedded. Unchanged components are read from `out/components-embeddings.json` at zero cost. In CI, pair this with `actions/cache` (see [GitHub Actions](#github-actions)) to persist the cache across runs.
+**Caché de embeddings:** el hash SHA-256 de cada archivo fuente se guarda junto a su vector. En ejecuciones posteriores, solo se re-embeden los archivos que cambiaron. Los componentes sin cambios se leen de `out/components-embeddings.json` sin costo. En CI, combiná esto con `actions/cache` (ver [GitHub Actions](#github-actions)) para persistir el caché entre runs.
 
-### 3. Compare (no API calls)
+### 3. Compare (sin llamadas al API)
 
-`csa compare` computes cosine similarity for every pair of components and groups the similar ones into clusters using union-find. Clusters get a heuristic consolidation suggestion based on shared props and DOM structure.
+`csa compare` calcula similitud coseno para cada par de componentes y agrupa los similares en clusters usando union-find. Cada cluster recibe una sugerencia de consolidación heurística basada en props compartidas y estructura DOM.
 
 ### 4. Report
 
-`csa report` writes `out/report.md` — a Markdown file ready to be posted as a GitHub PR comment. `csa comment` upserts it as a sticky comment (updates on re-runs, doesn't spam the PR).
+`csa report` escribe `out/report.md` — un archivo Markdown listo para publicarse como comentario de PR en GitHub. `csa comment` lo hace de forma sticky (actualiza el comentario en cada re-run, no spamea el PR).
 
 ---
 
-## Cost
+## Costos
 
-The only step that calls the OpenAI API is `csa embed`. `text-embedding-3-small` is priced at **$0.020 per 1 million tokens**.
+El único paso que llama al API de OpenAI es `csa embed`. `text-embedding-3-small` tiene un precio de **$0.020 por millón de tokens**.
 
-Each component's text representation is roughly 100–300 tokens depending on how many props and JSX tags it has.
+La representación de texto de cada componente ocupa aproximadamente 100–300 tokens según cuántas props y tags JSX tenga.
 
-| Codebase size | Tokens per run | Cost per run | 50 PRs/month |
-|---------------|---------------|-------------|--------------|
-| 20 components | ~1,500 | $0.000030 | $0.002/mo |
-| 100 components | ~10,000 | $0.000200 | $0.010/mo |
-| 300 components | ~40,000 | $0.000800 | $0.040/mo |
-| 600 components | ~100,000 | $0.002000 | $0.100/mo |
+| Tamaño de codebase | Tokens por run | Costo por run | 50 PRs/mes |
+|--------------------|---------------|---------------|------------|
+| 20 componentes | ~1.500 | $0.000030 | $0.002/mes |
+| 100 componentes | ~10.000 | $0.000200 | $0.010/mes |
+| 300 componentes | ~40.000 | $0.000800 | $0.040/mes |
+| 600 componentes | ~100.000 | $0.002000 | $0.100/mes |
 
-**With the file-hash cache active, the real cost per run is proportional to how many components actually changed in the PR** — not the total component count. A PR that touches 5 components out of 300 costs ~$0.000013.
+**Con el caché de hashes activo, el costo real por run es proporcional a cuántos componentes cambiaron en el PR**, no al total. Un PR que toca 5 componentes de un proyecto con 300 cuesta ~$0.000013.
 
-For reference: a single GPT-4o visual regression classification call (3 screenshots) costs ~$0.009. The full embedding run for a 100-component codebase costs less than classifying one changed screen.
+Para ponerlo en perspectiva: una sola llamada de clasificación visual con GPT-4o (3 screenshots) cuesta ~$0.009. El run completo de embeddings para una codebase de 100 componentes cuesta menos que clasificar una única pantalla cambiada.
 
 ---
 
 ## GitHub Actions
 
-Add this workflow to run on every PR that touches your components directory:
+Agregá este workflow para que corra en cada PR que toque tu directorio de componentes:
 
 ```yaml
 # .github/workflows/component-similarity.yml
@@ -162,7 +162,7 @@ name: Component Similarity
 on:
   pull_request:
     paths:
-      - 'src/components/**'   # adjust to your srcDir
+      - 'src/components/**'   # ajustar al srcDir de tu proyecto
 
 permissions:
   pull-requests: write
@@ -178,34 +178,34 @@ jobs:
           cache: npm
       - run: npm ci
 
-      # Restore embedding cache. Exact key hit = 0 API calls this run.
-      # Prefix hit = partial restore; only changed files are re-embedded.
+      # Restaurar caché de embeddings. Hit exacto = 0 llamadas al API.
+      # Hit por prefijo = restauración parcial; solo se re-embeden los archivos cambiados.
       - uses: actions/cache@v4
         with:
           path: out/components-embeddings.json
           key: csa-embed-${{ hashFiles('src/components/**/*.tsx', 'src/components/**/*.jsx') }}
           restore-keys: csa-embed-
 
-      - name: Analyze
+      - name: Analizar similitud
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: npx csa analyze
 
-      - name: Comment on PR
+      - name: Comentar en el PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx csa comment
 ```
 
-Required secrets: `OPENAI_API_KEY`. `GITHUB_TOKEN` is provided automatically by GitHub Actions.
+Secrets necesarios: `OPENAI_API_KEY`. `GITHUB_TOKEN` lo provee GitHub Actions automáticamente.
 
 ---
 
-## Environment variables
+## Variables de entorno
 
-| Variable | Description |
+| Variable | Descripción |
 |----------|-------------|
-| `OPENAI_API_KEY` | Required for `csa embed`. |
-| `GITHUB_TOKEN` | Required for `csa comment`. |
-| `CSA_CONFIG` | Override the config file path (default: `components.config.js`). |
-| `CSA_PR_NUMBER` | Override PR number for commenting (auto-detected in GitHub Actions). |
+| `OPENAI_API_KEY` | Requerida para `csa embed`. |
+| `GITHUB_TOKEN` | Requerida para `csa comment`. |
+| `CSA_CONFIG` | Sobreescribe la ruta del archivo de config (por defecto: `components.config.js`). |
+| `CSA_PR_NUMBER` | Sobreescribe el número de PR para comentar (se detecta automáticamente en GitHub Actions). |
